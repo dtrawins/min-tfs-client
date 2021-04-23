@@ -35,6 +35,7 @@ class TensorServingClient:
         input_dict: Dict[str, np.ndarray],
         request_pb: RequestTypes,
         timeout: int,
+        tensor_content: bool,
         model_version: Optional[int],
     ) -> ResponseTypes:
         stub = PredictionServiceStub(self._channel)
@@ -45,7 +46,7 @@ class TensorServingClient:
             request.model_spec.version.value = model_version
 
         for k, v in input_dict.items():
-            request.inputs[k].CopyFrom(ndarray_to_tensor_proto(v))
+            request.inputs[k].CopyFrom(ndarray_to_tensor_proto(v,tensor_content))
         return stub.Predict(request, timeout)
 
     def predict_request(
@@ -53,6 +54,7 @@ class TensorServingClient:
         model_name: str,
         input_dict: Dict[str, np.ndarray],
         timeout: int = 60,
+        tensor_content: bool = True,
         model_version: Optional[int] = None,
     ) -> PredictResponse:
         request_params: Dict[str, Any] = {
@@ -61,6 +63,7 @@ class TensorServingClient:
             "input_dict": input_dict,
             "request_pb": PredictRequest,
             "timeout": timeout,
+            "tensor_content": tensor_content
         }
         return self._make_inference_request(**request_params)
 

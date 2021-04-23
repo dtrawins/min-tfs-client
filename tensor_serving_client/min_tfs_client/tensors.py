@@ -25,13 +25,20 @@ def write_values_to_tensor_proto(
     return tensor_proto
 
 
-def ndarray_to_tensor_proto(ndarray: np.ndarray) -> TensorProto:
+def ndarray_to_tensor_proto(ndarray: np.ndarray, tensor_content=True) -> TensorProto:
     dtype = DataType(ndarray.dtype.type)
-    proto = TensorProto(
-        dtype=dtype.enum,
-        tensor_shape=TensorShapeProto(dim=[TensorShapeProto.Dim(size=d) for d in ndarray.shape]),
-    )
-    proto = write_values_to_tensor_proto(tensor_proto=proto, values=ndarray.ravel(), dtype=dtype)
+    if tensor_content:
+        proto = TensorProto(
+            dtype=dtype.enum,
+            tensor_shape=TensorShapeProto(dim=[TensorShapeProto.Dim(size=d) for d in ndarray.shape]),
+            tensor_content=ndarray.tostring()
+        )
+    else:
+        proto = TensorProto(
+            dtype=dtype.enum,
+            tensor_shape=TensorShapeProto(dim=[TensorShapeProto.Dim(size=d) for d in ndarray.shape]),
+        )
+        proto = write_values_to_tensor_proto(tensor_proto=proto, values=ndarray.ravel(), dtype=dtype)
     return proto
 
 
@@ -42,5 +49,9 @@ def extract_shape(tensor_proto: TensorProto) -> Tuple[int, ...]:
 def tensor_proto_to_ndarray(tensor_proto: TensorProto) -> np.ndarray:
     dtype = DataType(tensor_proto.dtype)
     shape = extract_shape(tensor_proto)
-    proto_values = getattr(tensor_proto, dtype.proto_field_name)
-    return np.array([element for element in proto_values], dtype=dtype.numpy_dtype).reshape(*shape)
+    if len(tensor_proto.tensor_content)>0:
+        tensor_content = getattr(tensor_proto, 'tensor_content')
+        return np.frombuffer(tensor_content, dtype=dtype.numpy_dtype).reshape(*shape)
+    else:
+        proto_values = getattr(tensor_proto, dtype.proto_field_name)
+        return np.array([element for element in proto_values], dtype=dtype.numpy_dtype).reshape(*shape)
